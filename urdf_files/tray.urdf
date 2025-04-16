@@ -1,0 +1,114 @@
+<?xml version="1.0"?>
+<robot name="tray">
+
+    <!-- Tray Base -->
+    <link name="tray_base">
+        <visual>
+            <geometry>
+                <box size="0.6 0.4 0.02"/>
+            </geometry>
+            <material name="gray">
+                <color rgba="0.5 0.5 0.5 1"/>
+            </material>
+        </visual>
+        <collision>
+            <geometry>
+                <box size="0.6 0.4 0.02"/>
+            </geometry>
+        </collision>
+        <inertial>
+            <mass value="2"/>
+            <inertia ixx="0.02" iyy="0.02" izz="0.02"/>
+        </inertial>
+    </link>
+
+    <!-- Tray Side Walls -->
+    <link name="tray_wall_front">
+        <visual>
+            <geometry>
+                <box size="0.6 0.02 0.05"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <box size="0.6 0.02 0.05"/>
+            </geometry>
+        </collision>
+        <inertial>
+            <mass value="0.1"/>
+            <inertia ixx="0.01" iyy="0.01" izz="0.01"/>
+        </inertial>
+    </link>
+    <joint name="wall_front_joint" type="fixed">
+        <parent link="tray_base"/>
+        <child link="tray_wall_front"/>
+        <origin xyz="0 0.21 0.035"/>
+    </joint>
+
+    <link name="tray_wall_back">
+        <visual>
+            <geometry>
+                <box size="0.6 0.02 0.05"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <box size="0.6 0.02 0.05"/>
+            </geometry>
+        </collision>
+        <inertial>
+            <mass value="0.1"/>
+            <inertia ixx="0.01" iyy="0.01" izz="0.01"/>
+        </inertial>
+    </link>
+    <joint name="wall_back_joint" type="fixed">
+        <parent link="tray_base"/>
+        <child link="tray_wall_back"/>
+        <origin xyz="0 -0.21 0.035"/>
+    </joint>
+
+    <link name="tray_wall_left">
+        <visual>
+            <geometry>
+                <box size="0.02 0.4 0.05"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <box size="0.02 0.4 0.05"/>
+            </geometry>
+        </collision>
+        <inertial>
+            <mass value="0.1"/>
+            <inertia ixx="0.01" iyy="0.01" izz="0.01"/>
+        </inertial>
+    </link>
+    <joint name="wall_left_joint" type="fixed">
+        <parent link="tray_base"/>
+        <child link="tray_wall_left"/>
+        <origin xyz="-0.29 0 0.035"/>
+    </joint>
+
+    <link name="tray_wall_right">
+        <visual>
+            <geometry>
+                <box size="0.02 0.4 0.05"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <box size="0.02 0.4 0.05"/>
+            </geometry>
+        </collision>
+        <inertial>
+            <mass value="0.1"/>
+            <inertia ixx="0.01" iyy="0.01" izz="0.01"/>
+        </inertial>
+    </link>
+    <joint name="wall_right_joint" type="fixed">
+        <parent link="tray_base"/>
+        <child link="tray_wall_right"/>
+        <origin xyz="0.29 0 0.035"/>
+    </joint>
+
+</robot>
