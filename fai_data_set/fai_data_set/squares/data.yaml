@@ -1,0 +1,13 @@
+train: /Users/anusham/Downloads/fai_data_set/squares/train/images
+val: /Users/anusham/Downloads/fai_data_set/squares/valid/images
+test: /Users/anusham/Downloads/fai_data_set/squares/test/images
+
+nc: 5
+names: ['blue', 'green', 'pink', 'red', 'yellow']
+
+roboflow:
+  workspace: yolo-rrhld
+  project: square_pick
+  version: 2
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/yolo-rrhld/square_pick/dataset/2
