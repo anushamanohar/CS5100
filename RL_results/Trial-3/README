@@ -1,0 +1,113 @@
+1. Results Summary
+
+This project implements a reinforcement learning (RL) agent trained to perform robotic grasping using a five-stage reward shaping system. The staged reward model helps the agent decompose a complex task into smaller, learnable sub-tasks. Early training results show that:
+
+-The agent reliably reaches Stage 0: Positioning above the object.
+
+-However, it consistently fails to transition to Stage 2: Grasp, instead stabilizing at an intermediate reward (53.63).
+
+-Grasp attempts remain at 0 across all episodes, and no lifting or successful grasps are observed.
+
+2. Implementation Details
+
+Environment
+
+Task: Pick-and-lift using a simulated robotic arm and object tray setup
+
+Visual Input: YOLO-based object detection from RGB camera feed
+
+Action Space: Continuous control of 3D end effector position and gripper state
+
+Reward System: Integrated staged rewards across five sub-tasks
+
+Success Criterion: Object successfully grasped and lifted ≥ 5cm
+
+3. Training Methodology
+
+Algorithm: Soft Actor-Critic (SAC)
+
+Network Architecture: CNN-based feature extractor for image input, integrated with actor-critic architecture
+
+Learning Setup:
+
+GPU-enabled training on ROG laptop
+
+Batch size: 256
+
+Learning rate: 0.0003
+
+Entropy coefficient used to promote exploration
+
+Environment: Custom VisualRoboticArmEnv with use_staged_rewards=True
+
+4. Results Analysis
+
+-Observed Training Dynamics
+
+The agent has learned to consistently position itself above the object (Stage 0 complete).
+
+YOLO-based object localization is functioning correctly.
+
+Rewards plateau at 53.63, indicating that the agent has likely found a local optimum at the hovering stage and does not attempt descent or grasp.
+
+Training Loss Behavior
+
+Actor loss: Increasing, reflecting exploration of new actions
+
+Critic loss: Significantly higher (~252), which is common early in training as value estimates adjust
+
+Reward: Stable but stagnant, suggesting failure to discover higher-reward trajectories
+
+5. Current Bottleneck: Stage Transition
+
+A major challenge is the transition from:
+
+Stage 0 → Stage 1 → Stage 2, particularly from hovering above the object to descending and engaging the gripper.
+
+6. Potential reasons:
+
+-The current reward for grasping may be too weak to justify abandoning the stable reward from hovering.
+
+-The agent may lack confidence (in terms of value estimation) in the outcome of trying new actions like descent or gripping.
+
+-The reward gradient between stages is not steep enough to drive progression beyond Stage 0.
+
+7. Significance
+
+-This training setup and its limitations illustrate several important points in applied reinforcement learning:
+
+-Reward Shaping is crucial for guiding agents through multi-step tasks.
+
+-Exploration vs. Exploitation must be carefully balanced—agents may get stuck in local optima.
+
+-Stage transitions are often where most real-world robotic agents fail unless transitions are explicitly incentivized.
+
+8. Lessons Learned
+
+-Incremental rewards help guide complex behavior, but only if transitions are well-rewarded and well-defined.
+
+-Sparse high-level goals (like lift success) are not enough for learning detailed manipulation skills.
+
+-The gripper action needs stronger encouragement in both value and reward signal.
+
+9. Future Improvements
+
+-Reward and Transition Design-Increase the reward gap between Stage 1 (descent) and Stage 2 (grasp) to encourage exploration of grasping behavior.
+
+-Fine-tune the conditions that detect stage transitions to be more robust and forgiving in early episodes.
+
+-Add temporary reward shaping to encourage gripper closure when the end-effector is near the object.
+
+-Hybrid Control Strategy-A promising future direction is hybrid control, combining RL and deterministic logic:
+
+-Use RL for object localization and positioning (Stages 0–1).
+
+-Switch to manual or rule-based control for grasping and lifting (Stages 2–4) if RL confidence is low.
+
+-This fallback system would help ensure task completion even if full end-to-end RL fails to generalize.
+
+10. Training Stability
+
+-Consider temporarily increasing entropy coefficient to push the agent out of the Stage 0 reward plateau.
+
+-Extend training beyond 50,000 steps to allow more exploration across multiple stages.
