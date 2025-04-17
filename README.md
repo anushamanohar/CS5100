@@ -223,13 +223,13 @@ The hybrid approach integrates proven manual control sequences to handle the mor
 
 <!-- Step 1 and Step 2 side by side -->
 <p float="left">
-  <img src="media/M1.png" width="400" alt="Step 1" />
-  <img src="media/M2.png" width="400" alt="Step 2" />
+  <img src="media/M1.png" width="600" height="450" alt="Step 1" />
+  <img src="media/M2.png" width="600" height="450" alt="Step 2" />
 </p>
 
 <!-- Step 3 below -->
 <p>
-  <img src="media/M3.png" width="500" alt="Step 3" />
+  <img src="media/M3.png" width="600" height="450" alt="Step 3" />
 </p>
 
 ## Hybrid RL Result Images
@@ -237,8 +237,8 @@ The hybrid approach integrates proven manual control sequences to handle the mor
 <h3>Manipulation Process</h3>
 
 <p float="left">
-  <img src="media/R1.png" width="400" alt="Step 1"/>
-  <img src="media/R2.png" width="400" alt="Step 2"/>
+  <img src="media/R1.png" width="600" height="450" alt="Step 1" />
+  <img src="media/R2.png" width="600" height="450" alt="Step 2" />
 </p>
 
 ## Conclusion
