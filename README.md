@@ -81,44 +81,43 @@ Y = (cy - cy0) * Z / fy
 - **OpenCV** and **PyTorch** – Image processing and deep learning integration
 - **NumPy** and **Matplotlib** – Data handling, numerical computations, and visualizations
 
-## Directory Structure
+<details> <summary><strong>Click to expand: Directory Structure</strong></summary>
 
-├── RL_results/                            # Results from multiple training iterations
+RL_results/                             # Results from multiple training iterations
 
-├── Manual_Testing/                        # Testing scripts for individual components
-│   ├── Single object/                     # Tests with a single object in the environment
-│   │   ├── manual_test_singleobject.py
-│   │   └── env_setup.py                   # Single object environment setup
-│   └── Multi object/                      # Tests with multiple objects in the environment
-│       ├── manual_test_multiobject.py
-│       └── env_setup_multiobject.py       # Multi object environment setup
+Manual_Testing/                         # Testing scripts for individual components
+├── Single object/                      # Tests with a single object
+│   ├── manual_test_singleobject.py
+│   └── env_setup.py                    # Single object environment setup
+├── Multi object/                       # Tests with multiple objects
+│   ├── manual_test_multiobject.py
+│   └── env_setup_multiobject.py        # Multi object environment setup
 
-├── Misc scripts/                          # Support scripts and utilities
-│   ├── Test limitations results/          # Evaluation of system constraints
-│   ├── Yolo detection results/            # Object detection performance
-│   └── Various utility scripts            # Helper scripts for testing and setup
+Misc scripts/                           # Support scripts and utilities
+├── Test limitations results/           # Evaluation of system constraints
+├── Yolo detection results/             # Object detection performance
+└── Various utility scripts             # Helper scripts for testing and setup
 
-├── RL_Testing_Folder/                     # Core reinforcement learning implementation
-│   ├── RL_train.py                        # Main training script
-│   ├── cnn_policy.py                      # Custom CNN policy implementation
-│   ├── env_setup_multiobject.py           # Environment setup for multiple objects
-│   ├── hybrid_training_4.py               # Hybrid RL/manual control implementation
-│   ├── staged_training_3.py               # Staged reward approach for training
-│   ├── models/                            # Model checkpoints and final model
-│   └── test_agent.py                      # Testing scripts for trained agents
+RL_Testing_Folder/                      # Core reinforcement learning implementation
+├── RL_train.py                         # Main training script
+├── cnn_policy.py                       # Custom CNN policy implementation
+├── env_setup_multiobject.py            # Environment setup for RL
+├── hybrid_training_4.py                # Hybrid RL/manual control logic
+├── staged_training_3.py                # Staged reward training
+├── models/                             # Trained model checkpoints
+└── test_agent.py                       # Evaluation script for trained models
 
-├── computer vision scripts/               # Computer vision implementation
-│   ├── cv_testing.py                      # Test script for vision components
-│   ├── env_setup_multiobject_cv.py        # Environment with CV integration
-│   └── sac_grasping_state.zip             # Trained model state
+computer vision scripts/                # Computer vision implementation
+├── cv_testing.py                       # Vision component testing
+├── env_setup_multiobject_cv.py         # CV-integrated environment
+└── sac_grasping_state.zip              # Trained model snapshot
 
-├── fai_data_set/                          # Data used for YOLOv5 training and testing
+fai_data_set/                           # Data used for YOLOv5 training
 
-├── generate_urdfs.py                      # URDF generation script
+generate_urdfs.py                       # URDF generation script
 
-└── requirements.txt                       # Project dependencies
-
-
+requirements.txt                        # Python package dependencies
+</details>
 
 ## How to Run the Project
 
