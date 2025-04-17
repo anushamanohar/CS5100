@@ -217,14 +217,16 @@ The hybrid approach integrates proven manual control sequences to handle the mor
 3. Spencer Karofsky
 4. Hemanth Sai Madadapu
 
-## Manual Testing Video
-<h2>Demo Video</h2>
+## Manual Testing Result Images
 
-<video width="640" controls>
-  <source src="FOAPresentation.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+![Step 1](media/M1.png)
+![Step 2](media/M2.png)
+![Step 3](media/M3.png)
 
+## Hybrid RL Result Images
+
+![Step 1](media/R1.png)
+![Step 2](media/R22.png)
 
 ## Conclusion
 
