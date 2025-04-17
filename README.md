@@ -51,11 +51,11 @@ Object positions are estimated in 3D using 2D object detection from YOLOv5 and t
 - The depth value at the detected pixel is extracted from the PyBullet depth buffer.
 - Real-world depth Z is computed using the formula:
 
-Z = (near * far) / (far - (far - near) * z_buffer)
+  Z = (near * far) / (far - (far - near) * z_buffer)
 
-Where:
+  Where:
 - z_buffer is the normalized depth value at (cx, cy)
-- near and far are the near and far clipping planes of the virtual camera.
+- near and far are the near and far clipping planes of the virtual camera
 
 ### Back-Projection to 3D
 
@@ -67,8 +67,8 @@ Y = (cy - cy0) * Z / fy
 
 ### World Frame Transformation
 
-- The (X, Y, Z) coordinates are translated to the global simulation frame by adding the camera’s world position (eye).
-- This produces an accurate 3D estimate of the object's location relative to the robot.
+- The (X, Y, Z) coordinates are translated to the global simulation frame by adding the camera’s world position (eye)
+- This produces an accurate 3D estimate of the object's location relative to the robot
 
 **This process enables the robot to perform grasping and manipulation based on vision alone, using RGB-D input.**
 
@@ -208,6 +208,7 @@ The hybrid approach integrates proven manual control sequences to handle the mor
 - Implement more complex manipulation tasks
 - Optimize for speed and efficiency
 - Improve the CNN architecture for better visual processing
+- Extend the current Hybrid RL model to do the drop sequence along with the existing grasp sequence as well
 
 ## Contributors
 
@@ -216,3 +217,12 @@ The hybrid approach integrates proven manual control sequences to handle the mor
 3. Spencer Karofsky
 4. Hemanth Sai Madadapu
 
+## Manual Testing and Hybrid RL Working Video
+![Demo of the system](FOAPresentation.gif)
+
+## Conclusion
+
+This project presents a vision-integrated reinforcement learning system for robotic pick-and-place tasks. By combining YOLOv5 for object detection, depth-based 3D localization, and a custom SAC policy, the robot learns to autonomously detect, grasp, and relocate objects in simulation. A hybrid control strategy and staged rewards significantly improve reliability and learning stability.
+The plot below demonstrates a 100% success rate achieved using this hybrid RL approach, highlighting its effectiveness. 
+
+![Success Rate Plot](optimized_test_results.png)
