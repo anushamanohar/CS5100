@@ -1,4 +1,4 @@
-# RL_train.py
+# Basic RL_train.py
 import os
 import time
 import numpy as np
@@ -14,9 +14,8 @@ from stable_baselines3.common.evaluation import evaluate_policy
 import gymnasium as gym
 from gymnasium import spaces
 
-# Import your existing environment
 from env_setup_multiobject import make_env, VisualRoboticArmEnv
-from cnn_policy import CustomSACPolicy  # Your existing CNN policy
+from cnn_policy import CustomSACPolicy 
 
 # Create directories for logs and models
 os.makedirs("logs", exist_ok=True)
@@ -35,7 +34,6 @@ class DimensionAdapter(gym.Wrapper):
         
         print(f"Adapting state dimensions: actual={actual_dim}, expected={expected_dim}")
         
-        # Modify observation space to match expected dimensions
         self.observation_space = spaces.Dict({
             "image": self.env.observation_space["image"],
             "state": spaces.Box(low=-np.inf, high=np.inf, shape=(expected_dim,), dtype=np.float32)
