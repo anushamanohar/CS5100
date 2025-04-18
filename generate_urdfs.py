@@ -6,14 +6,12 @@ import re
 urdf_directory = os.path.join(os.path.dirname(__file__), "urdf_files")
 os.makedirs(urdf_directory, exist_ok=True)
 
-# generate_urdfs.py
-
-import os
-import re
-
-urdf_directory = os.path.join(os.path.dirname(__file__), "urdf_files")
-os.makedirs(urdf_directory, exist_ok=True)
-
+#   This function generates a URDF file for a robotic arm consisting of:
+#   - A base
+#   - Three revolute arm joints
+#   - A wrist with pitch and roll
+#   - A fixed gripper palm
+#   - Two prismatic finger joints
 def create_rigid_robotic_arm_urdf():
     urdf_dir = os.path.join(os.path.dirname(__file__), "urdf_files")
     os.makedirs(urdf_dir, exist_ok=True)
@@ -236,13 +234,18 @@ def create_rigid_robotic_arm_urdf():
 """
     with open(file_path, "w") as f:
         f.write(urdf_content)
-    print(f"✅ Robotic arm URDF with gripper saved at {file_path}")
+    print(f"Robotic arm URDF with gripper saved at {file_path}")
     return file_path
 
 
 robotic_arm_urdf = create_rigid_robotic_arm_urdf()
 
-
+#   Generates a URDF file for a simple rectangular table composed of:
+#   - A brown tabletop with four vertical legs connected with fixed joints
+#   - The tabletop has dimensions 1m x 1m x 0.1m and a brown material color defined
+#     using RGBA values
+#   - Each leg is 0.1m x 0.1m x 0.6m and placed at a corner of the tabletop
+#   - Legs are connected using fixed joints, so the table is static in simulation
 def create_table_urdf():
     file_path = os.path.join(urdf_directory, "table.urdf")
 
@@ -313,6 +316,17 @@ def create_table_urdf():
 
 table_urdf = create_table_urdf()
 
+
+
+#   This function generates a URDF file for objects placed on the table — either a box or
+#   a sphere — with specified size and mass. These objects can be used for testing 
+#   grasping and manipulation tasks in a simulated environment.
+#
+# Parameters:
+#   - name:   The name of the object and the output URDF file (e.g., "box", "sphere")
+#   - shape:  The shape of the object, either "box" or "sphere"
+#   - size:   Size of the object (edge length for box, radius for sphere)
+#   - mass:   Mass of the object in kilograms
 def create_object_urdf(name, shape, size, mass):
     file_path = os.path.join(urdf_directory, f"{name}.urdf")
     
@@ -417,6 +431,16 @@ with open(parcel_ids_file, "w") as f:
 
 print(f"Parcel IDs saved to {parcel_ids_file}")
 
+
+#   This function creates a URDF file for a rectangular tray, which includes a flat
+#   base and four raised walls (front, back, left, right). The tray is used as pickup zone and
+#   drop zone 
+# Tray Description:
+#   - Base size: 0.6m x 0.4m x 0.02m
+#   - Side wall height: 0.05m
+#   - Side wall thickness: 0.02m
+#   - All walls are attached using fixed joints to ensure stability
+#   - Base is shaded gray for better visibility
 def create_tray_urdf():
     """Creates a URDF file for a tray with raised edges."""
     file_path = os.path.join(urdf_directory, "tray.urdf")
