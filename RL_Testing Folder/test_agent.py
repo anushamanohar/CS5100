@@ -1,4 +1,4 @@
-# final_grasp_test.py
+# Testing agent
 """
 Final test script that directly uses the successful manual control approach
 from process_single_object, avoiding hybrid controller complexity.
@@ -164,7 +164,7 @@ def create_fixed_constraint(env, robot_id, obj_id):
     
 def test_direct_grasp():
     """Run grasp test using the proven manual approach"""
-    print("\n===== DIRECT GRASP TEST =====")
+    print("\n DIRECT GRASP TEST")
     print("Using minimal manual control approach that worked in original code")
     
     # Create environment
@@ -283,7 +283,7 @@ def test_direct_grasp():
     # Determine success
     success = lift_height > 0.05
     if success:
-        print("\n✅ GRASP TEST PASSED: Successfully grasped and lifted object!")
+        print("\n GRASP TEST PASSED: Successfully grasped and lifted object!")
         try:
             p.addUserDebugText("GRASP SUCCESS!", 
                              [lifted_pos[0], lifted_pos[1], lifted_pos[2] + 0.1], 
@@ -293,7 +293,7 @@ def test_direct_grasp():
         except:
             pass
     else:
-        print("\n❌ GRASP TEST FAILED: Object not lifted high enough")
+        print("\nGRASP TEST FAILED: Object not lifted high enough")
         try:
             p.addUserDebugText("GRASP FAILED", 
                              [obj_pos[0], obj_pos[1], obj_pos[2] + 0.1], 
@@ -305,11 +305,11 @@ def test_direct_grasp():
     
     # Hold position to see the result
     print("\nHolding position for 3 seconds...")
-    for _ in range(180):  # 3 seconds
+    for _ in range(180):  
         p.stepSimulation()
         time.sleep(1/60)
     
-    # Clean up
+    
     env.close()
     return success
 
