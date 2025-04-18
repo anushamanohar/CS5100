@@ -12,11 +12,11 @@ from stable_baselines3.common.evaluation import evaluate_policy
 import gymnasium as gym
 from gymnasium import spaces
 
-# Import your existing environment and policy
+
 from env_setup_multiobject import make_env, VisualRoboticArmEnv
 from cnn_policy import CustomSACPolicy
 
-# Import dimension adapter from your existing code
+
 from RL_train import DimensionAdapter, TrainingMetricsCallback, plot_training_results
 
 # Create directories for logs and models
@@ -32,16 +32,16 @@ def train_with_staged_rewards(total_timesteps=100000, log_dir="logs/staged_train
     
     render=False
     print(f"Creating environment with render={render}")
-    # Create environment with staged rewards (already integrated)
+    # Create environment with staged rewards 
     env = make_env(seed=seed, render=render, num_objects=1, use_staged_rewards=True)()
     
-    # Add dimension adapter if needed
+    
     env = DimensionAdapter(env)
     
     # Vectorize environment
     vec_env = DummyVecEnv([lambda: env])
     
-    # Use VecTransposeImage if needed
+    
     if isinstance(vec_env.observation_space, gym.spaces.Dict) and 'image' in vec_env.observation_space.spaces:
         vec_env = VecTransposeImage(vec_env)
     
@@ -121,7 +121,6 @@ def test_staged_rewards_model(model_path, num_episodes=10, render=True, seed=0):
     # Test the model
     print(f"Testing model for {num_episodes} episodes...")
     
-    # Prepare arrays to collect metrics
     rewards = []
     successes = []
     max_stages = []
