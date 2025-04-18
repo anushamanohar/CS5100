@@ -12,6 +12,7 @@ import random
 import torch
 import cv2
 import sys
+from sklearn.cluster import DBSCAN
 
 # === YOLOv5 Setup ===
 YOLOV5_PATH = r"/Users/spencerkarofsky/Desktop/projects/cs5100_final/fai_data_set/yolov5"
@@ -177,12 +178,11 @@ class VisualRoboticArmEnv(gym.Env):
         # Limit number of objects to a reasonable range
         num_objects = max(1, min(3, self.num_objects))
     
-        # Predefined positions that are KNOWN to be reachable
-        # These are specifically based on your successful position
+        # Predefined positions
         reliable_positions = [
-            [0.83, 0.21, 0.45],  # Position 1 - Your proven position
-            [0.83, 0.195, 0.45],  # Position 2 - Very close to Position 1
-            [0.83, 0.225, 0.45]   # Position 3 - Also close to Position 1
+            [0.83, 0.21, 0.45],
+            [0.83, 0.195, 0.45],
+            [0.83, 0.225, 0.45]
         ]
     
         # Color options for easy identification
@@ -244,7 +244,7 @@ class VisualRoboticArmEnv(gym.Env):
         # Camera setup for vision
         width, height = 128, 128
         fov = 60
-        eye = [1.0, -0.2, 0.8]
+        # eye = [1.0, -0.2, 0.8]
         target = [1.0, 0.0, 0.35]
         up = [0, 0, 1]
         aspect = width / height
@@ -260,7 +260,7 @@ class VisualRoboticArmEnv(gym.Env):
             T = cam_to_world[:3, 3]
             return R, T
         
-
+        # Get gripper positons and states
         end_effector_link = 3
         gripper_state = p.getLinkState(self.robot_id, end_effector_link, computeForwardKinematics=True)
 
@@ -278,6 +278,7 @@ class VisualRoboticArmEnv(gym.Env):
 
         camera_eye_secondary = apply_offset(np.array(camera_eye_primary), cam_offset)
 
+        # Compute view matrices
         camera_target = np.array(target)
         view_matrix_primary = p.computeViewMatrix(camera_eye_primary.tolist(), camera_target.tolist(), up)
         view_matrix_secondary = p.computeViewMatrix(camera_eye_secondary.tolist(), camera_target.tolist(), up)
@@ -291,12 +292,15 @@ class VisualRoboticArmEnv(gym.Env):
             [0, 0, 1]
         ])
 
+
+        # Get matrices
         R1, T1 = get_extrinsic_matrix(view_matrix_primary)
         R2, T2 = get_extrinsic_matrix(view_matrix_secondary)
 
         P1 = K @ np.hstack((R1.T, -R1.T @ T1.reshape(3, 1)))
         P2 = K @ np.hstack((R2.T, -R2.T @ T2.reshape(3, 1)))
 
+        # Capture images
         image_data_primary = p.getCameraImage(width, height, view_matrix_primary, projection_matrix, renderer=p.ER_BULLET_HARDWARE_OPENGL)
         image_data_secondary = p.getCameraImage(width, height, view_matrix_secondary, projection_matrix, renderer=p.ER_BULLET_HARDWARE_OPENGL)
 
@@ -323,7 +327,6 @@ class VisualRoboticArmEnv(gym.Env):
 
             pred_primary = self.yolo(img_tensor_primary, augment=False, visualize=False)
             det_primary = non_max_suppression(pred_primary, self.conf_thres, self.iou_thres)[0]
-            print(det_primary[0])
 
             img_rgb_secondary = cv2.cvtColor(image_secondary, cv2.COLOR_RGB2BGR)
             img_letterboxed_secondary = letterbox(img_rgb_secondary, self.yolo_img_size, stride=self.yolo_stride, auto=True)[0]
@@ -339,6 +342,7 @@ class VisualRoboticArmEnv(gym.Env):
             #print()
 
             if det_primary is not None and len(det_primary) and det_secondary is not None and len(det_secondary):
+                # Compute centroids for triangulation
                 x1_p, y1_p, x2_p, y2_p, conf_p, cls_p = det_primary[0].tolist()
                 cx_p = int((x1_p + x2_p) / 2)
                 cy_p = int((y1_p + y2_p) / 2)
@@ -357,6 +361,7 @@ class VisualRoboticArmEnv(gym.Env):
                 center_primary = center_primary.reshape(2, 1).astype(np.float32)
                 center_secondary = center_secondary.reshape(2, 1).astype(np.float32)
 
+                # Triangulate the points
                 points_3D_hom = cv2.triangulatePoints(P1, P2, center_primary, center_secondary)
                 points_3D = points_3D_hom[:3, :] / points_3D_hom[3, :]
                 cube_estimated_pos = points_3D[:, 0]
@@ -382,6 +387,9 @@ class VisualRoboticArmEnv(gym.Env):
         return {"image": image_primary, "state": state}
 
     def _get_ee_index(self):
+        """
+        Get end-effector index
+        """
         for i in range(p.getNumJoints(self.robot_id)):
             joint_info = p.getJointInfo(self.robot_id, i)
             if joint_info[12].decode("utf-8") == "gripper_palm":
@@ -389,6 +397,9 @@ class VisualRoboticArmEnv(gym.Env):
         return p.getNumJoints(self.robot_id) - 1
 
     def _get_gripper_joint_indices(self):
+        """
+        Get gripper joint indices
+        """
         names = ["left_finger_joint", "right_finger_joint"]
         return [i for i in range(p.getNumJoints(self.robot_id))
                 if p.getJointInfo(self.robot_id, i)[1].decode("utf-8") in names]
@@ -435,6 +446,9 @@ class VisualRoboticArmEnv(gym.Env):
 
 
     def _compute_reward(self):
+        """
+        Compute the reward
+        """
         reward = 0.0
         
         if self.obj_id is None:
@@ -448,6 +462,8 @@ class VisualRoboticArmEnv(gym.Env):
             print("Invalid obs_state:", obs_state)
         obj_pos = obs_state[-3:]
         dist_ee_to_obj = np.linalg.norm(ee_pos - obj_pos)
+
+        # Update reward based on distance
         reward -= dist_ee_to_obj * 5.0
 
         if self._check_grasp():
@@ -462,6 +478,7 @@ class VisualRoboticArmEnv(gym.Env):
                 print("dist_obj_to_drop is invalid!", dist_obj_to_drop)
                 dist_obj_to_drop = 0.0  # or some fallback
 
+            # Update reward based on distance to drop
             reward += 10.0 * (1 - np.tanh(dist_obj_to_drop))
 
             reward += 10.0 * (1 - np.tanh(dist_obj_to_drop))
@@ -480,11 +497,13 @@ class VisualRoboticArmEnv(gym.Env):
         return reward, False
 
     def step(self, action):
+        # Update joint positions
         joint_targets = np.clip(action[:7], -1, 1) * np.pi
         for idx, joint_idx in enumerate(self.arm_joint_indices):
             p.setJointMotorControl2(self.robot_id, joint_idx, p.POSITION_CONTROL,
                                     targetPosition=joint_targets[idx], force=500)
 
+        # Update gripper positions
         grip = action[6]
         grip_pos = 0.04 * (1 - np.clip(grip, -1, 1)) / 2
         for gripper_joint in self.gripper_joints:

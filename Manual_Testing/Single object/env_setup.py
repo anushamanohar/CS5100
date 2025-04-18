@@ -42,7 +42,7 @@ class VisualRoboticArmEnv(gym.Env):
             'y_min': -0.2, 'y_max': 0.3,
             'z_min': 0.4, 'z_max': 0.6
         }
-
+        # Disconnect if connected for resetting
         if p.isConnected():
             p.disconnect()
         self.client = p.connect(p.GUI if render else p.DIRECT)
@@ -52,6 +52,7 @@ class VisualRoboticArmEnv(gym.Env):
         self.arm_joint_indices = [0, 1, 2, 3, 4, 5, 6]
         self.gripper_joints = [7, 8]
 
+        # Set up action and observation spaces
         self.action_space = spaces.Box(low=-1, high=1, shape=(7,), dtype=np.float32)
         self.observation_space = spaces.Dict({
             "image": spaces.Box(low=0, high=255, shape=(128, 128, 3), dtype=np.uint8),
@@ -140,6 +141,10 @@ class VisualRoboticArmEnv(gym.Env):
         return self._get_obs(), {}
 
     def _get_obs(self):
+        """
+        Get image and object position
+        """
+        # Get information from PyBullet
         joint_angles = [p.getJointState(self.robot_id, i)[0] for i in self.arm_joint_indices]
         joint_vels = [p.getJointState(self.robot_id, i)[1] for i in self.arm_joint_indices]
         ee_pos = p.getLinkState(self.robot_id, self.ee_link_index)[0]
@@ -147,15 +152,18 @@ class VisualRoboticArmEnv(gym.Env):
         rel_pos = np.array(obj_pos) - np.array(ee_pos)
         state = np.array(joint_angles + joint_vels + list(ee_pos) + list(rel_pos) + list(obj_pos))
 
+        # Variables for extracting projection matrices
         width, height = 128, 128
         fov = 60
         eye = [1.0, -0.2, 0.8]
         target = [1.0, 0.0, 0.35]
         up = [0, 0, 1]
 
+        # Compute view and projection matrices
         view_matrix = p.computeViewMatrix(eye, target, up)
         proj_matrix = p.computeProjectionMatrixFOV(fov, width / height, 0.1, 3.1)
 
+        # Get camera image and process image
         _, _, rgb, depth_buffer, _ = p.getCameraImage(width, height, view_matrix, proj_matrix, renderer=p.ER_BULLET_HARDWARE_OPENGL)
         image = np.reshape(rgb, (height, width, 4))[:, :, :3].astype(np.uint8)
         depth = np.reshape(depth_buffer, (height, width))
@@ -169,16 +177,20 @@ class VisualRoboticArmEnv(gym.Env):
         if img_tensor.ndimension() == 3:
             img_tensor = img_tensor.unsqueeze(0)
 
+        
+        # Get box coordinates from YOLOv5
         pred = self.yolo(img_tensor, augment=False, visualize=False)
         det = non_max_suppression(pred, self.conf_thres, self.iou_thres)[0]
 
         if det is not None and len(det):
-            x1, y1, x2, y2, conf, cls = det[0].tolist()
+            # Get YOLOv5 detection information
+            x1, y1, x2, y2, _, cls = det[0].tolist()
             cx = int((x1 + x2) / 2)
             cy = int((y1 + y2) / 2)
             cx = np.clip(cx, 0, width - 1)
             cy = np.clip(cy, 0, height - 1)
 
+            # Estimate depth
             near = 0.1
             far = 3.1
             z_buffer = depth[cy, cx]
@@ -200,6 +212,9 @@ class VisualRoboticArmEnv(gym.Env):
         return {"image": image, "state": state}
 
     def _get_ee_index(self):
+        """
+        Find end-effector index
+        """
         for i in range(p.getNumJoints(self.robot_id)):
             joint_info = p.getJointInfo(self.robot_id, i)
             if joint_info[12].decode("utf-8") == "gripper_palm":
@@ -207,11 +222,17 @@ class VisualRoboticArmEnv(gym.Env):
         return p.getNumJoints(self.robot_id) - 1
 
     def _get_gripper_joint_indices(self):
+        """
+        Return the indices of the gripper joint names
+        """
         names = ["left_finger_joint", "right_finger_joint"]
         return [i for i in range(p.getNumJoints(self.robot_id))
                 if p.getJointInfo(self.robot_id, i)[1].decode("utf-8") in names]
 
     def _check_grasp(self):
+        """
+        Check if grasped
+        """
         contacts = p.getContactPoints(bodyA=self.robot_id, bodyB=self.obj_id)
         
         # More robust grasp detection - check if both fingers are in contact
@@ -234,35 +255,45 @@ class VisualRoboticArmEnv(gym.Env):
         return self.grasp_counter > 3
 
     def _compute_reward(self):
+        """
+        Compute Reward Function
+        """
         reward = 0.0
         ee_pos = np.array(p.getLinkState(self.robot_id, self.ee_link_index)[0])
         obj_pos, _ = p.getBasePositionAndOrientation(self.obj_id)
         dist_ee_to_obj = np.linalg.norm(ee_pos - obj_pos)
+
+        # Update reward based on distance
         reward -= dist_ee_to_obj * 5.0
 
+        # Update reward based on grasp
         if self._check_grasp():
             reward += 50.0
             reward += (obj_pos[2] - 0.4) * 50.0  # Reward lifting
             drop_target_pos = np.array([0.6, -0.3, 0.3])
             dist_obj_to_drop = np.linalg.norm(obj_pos - drop_target_pos)
             reward += 10.0 * (1 - np.tanh(dist_obj_to_drop))
-
+        # Reward based on successful grasp
         if (np.linalg.norm(np.array(obj_pos[:2]) - np.array([0.6, -0.3])) < 0.1 and
                 obj_pos[2] < 0.35 and not self._check_grasp()):
             reward += 200.0
             reward += 10.0 * ((self.max_steps - self.step_counter) / self.max_steps)
+            # Object grasped
             return reward, True
 
+        # Object not grasped
         joint_velocities = [p.getJointState(self.robot_id, i)[1] for i in self.arm_joint_indices]
         reward -= 0.5 * np.linalg.norm(joint_velocities)
         return reward, False
 
     def step(self, action):
+        # Update joint positions
         joint_targets = np.clip(action[:7], -1, 1) * np.pi
         for idx, joint_idx in enumerate(self.arm_joint_indices):
             p.setJointMotorControl2(self.robot_id, joint_idx, p.POSITION_CONTROL,
                                     targetPosition=joint_targets[idx], force=500)
 
+        # Update gripper positions
         grip = action[6]
         grip_pos = 0.04 * (1 - np.clip(grip, -1, 1)) / 2
         for gripper_joint in self.gripper_joints:
@@ -270,8 +301,9 @@ class VisualRoboticArmEnv(gym.Env):
 
         for _ in range(8):
             p.stepSimulation()
-
+        # Get observation
         obs = self._get_obs()
+        # Get reward
         reward, done = self._compute_reward()
         self.step_counter += 1
         return obs, reward, done or self.step_counter >= self.max_steps, False, {}

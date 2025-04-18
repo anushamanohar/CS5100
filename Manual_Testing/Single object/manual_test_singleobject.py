@@ -125,7 +125,7 @@ def log_contacts(env):
 def create_fixed_constraint(env, robot_id, obj_id):
     """Create a fixed constraint between the robot gripper and the object"""
     ee_index = env.unwrapped.ee_link_index
-    left_finger, right_finger = env.unwrapped.gripper_joints
+    #left_finger, right_finger = env.unwrapped.gripper_joints
     
     # Get positions
     ee_pos = p.getLinkState(robot_id, ee_index)[0]

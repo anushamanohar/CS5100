@@ -85,6 +85,7 @@ class VisualRoboticArmEnv(gym.Env):
         if seed is not None:
             np.random.seed(seed)
 
+        # Set simulation settings
         p.resetSimulation()
         p.setGravity(0, 0, -9.81)
         p.setTimeStep(1 / 240)
@@ -166,19 +167,20 @@ class VisualRoboticArmEnv(gym.Env):
         return self._get_obs(), {}
 
     def create_multiple_objects(self):
-        """Create multiple objects at positions that are reliably reachable by the robot"""
+        """
+        Create multiple objects at positions that are reliably reachable by the robot
+        """
         # Clear existing objects
         self.object_ids = []
     
         # Limit number of objects to a reasonable range
         num_objects = max(1, min(3, self.num_objects))
     
-        # Predefined positions that are KNOWN to be reachable
-        # These are specifically based on your successful position
+        # Predefined positions
         reliable_positions = [
-            [0.83, 0.21, 0.45],  # Position 1 - Your proven position
-            [0.83, 0.195, 0.45],  # Position 2 - Very close to Position 1
-            [0.83, 0.225, 0.45]   # Position 3 - Also close to Position 1
+            [0.83, 0.21, 0.45],
+            [0.83, 0.195, 0.45],
+            [0.83, 0.225, 0.45]
         ]
     
         # Color options for easy identification
@@ -221,7 +223,9 @@ class VisualRoboticArmEnv(gym.Env):
                 time.sleep(1/240)
 
     def _get_obs(self):
-        """Get current observation state"""
+        """
+        Get current observation state
+        """
         joint_angles = [p.getJointState(self.robot_id, i)[0] for i in self.arm_joint_indices]
         joint_vels = [p.getJointState(self.robot_id, i)[1] for i in self.arm_joint_indices]
         ee_pos = p.getLinkState(self.robot_id, self.ee_link_index)[0]
@@ -367,11 +371,13 @@ class VisualRoboticArmEnv(gym.Env):
         return reward, False
 
     def step(self, action):
+        # Change arm controls
         joint_targets = np.clip(action[:7], -1, 1) * np.pi
         for idx, joint_idx in enumerate(self.arm_joint_indices):
             p.setJointMotorControl2(self.robot_id, joint_idx, p.POSITION_CONTROL,
                                     targetPosition=joint_targets[idx], force=500)
 
+        # Control grip
         grip = action[6]
         grip_pos = 0.04 * (1 - np.clip(grip, -1, 1)) / 2
         for gripper_joint in self.gripper_joints:
@@ -380,26 +386,32 @@ class VisualRoboticArmEnv(gym.Env):
         for _ in range(8):
             p.stepSimulation()
 
-        obs = self._get_obs()
+        obs = self._get_obs() # obs: {"image": image, "state": state}
         reward, done = self._compute_reward()
         self.step_counter += 1
         return obs, reward, done or self.step_counter >= self.max_steps, False, {}
     
     def set_target_object(self, index):
-        """Set the target object to a specific index in the object_ids list"""
+        """
+        Set the target object to a specific index in the object_ids list
+        """
         if 0 <= index < len(self.object_ids):
             self.obj_id = self.object_ids[index]
             return True
         return False
         
     def get_tray_positions(self):
-        """Get positions of source and destination trays"""
+        """
+        Get positions of source and destination trays
+        """
         source_pos, _ = p.getBasePositionAndOrientation(self.tray_id)
         dest_pos, _ = p.getBasePositionAndOrientation(self.drop_tray_id)
         return source_pos, dest_pos
         
     def get_object_ids(self):
-        """Get list of all object IDs"""
+        """
+        Get list of all object IDs
+        """
         return self.object_ids
 
     def close(self):
@@ -407,6 +419,9 @@ class VisualRoboticArmEnv(gym.Env):
 
 
 def make_env(seed=0, render=False, num_objects=1):
+    """
+    Make the environment
+    """
     def _init():
         env = VisualRoboticArmEnv(render=render, num_objects=num_objects)
         env = Monitor(env)
