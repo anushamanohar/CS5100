@@ -3,7 +3,7 @@ import pybullet as p
 import numpy as np
 from env_setup import make_env
 
-# === Config ===
+# Config
 TRAY_HEIGHT = 0.4
 DESCENT_OFFSET = 0.005
 MAX_ERROR_THRESHOLD = 0.025
@@ -89,7 +89,7 @@ def move_to_position(env, target_pos, max_retries=20, threshold=0.02, debug=True
         joint_limits_upper.append(info[9])  # Upper limit
     
     if debug:
-        print(f"\n🚀 Moving to target: {np.round(target_pos, 4)}")
+        print(f"\n Moving to target: {np.round(target_pos, 4)}")
     
     # Step-by-step approach
     for i in range(max_retries):
@@ -106,7 +106,7 @@ def move_to_position(env, target_pos, max_retries=20, threshold=0.02, debug=True
         # Check if we've reached the target
         if distance < threshold:
             if debug:
-                print(f"✅ Reached target position! Final distance: {distance:.4f}")
+                print(f"Reached target position! Final distance: {distance:.4f}")
             return True
         
         # Calculate IK for target position
@@ -139,17 +139,17 @@ def move_to_position(env, target_pos, max_retries=20, threshold=0.02, debug=True
             if env.render:
                 time.sleep(1/240)
         
-        # If we're getting stuck, try a different approach
+       
         if i > max_retries // 2 and distance > threshold * 2:
             # Try a slightly different target on direct line to target
             if debug:
-                print("⚠️ Progress slow - adjusting approach")
+                print(" Progress slow - adjusting approach")
             
             # Get current joint positions
             current_joints = [p.getJointState(robot_id, j)[0] for j in joint_indices]
             
-            # Try more incremental joint change
-            blend_factor = 0.2  # Take smaller steps in joint space
+            
+            blend_factor = 0.2  
             for j, joint_idx in enumerate(joint_indices):
                 current = current_joints[j]
                 target = ik_solution[j]
@@ -163,9 +163,9 @@ def move_to_position(env, target_pos, max_retries=20, threshold=0.02, debug=True
                 if env.render:
                     time.sleep(1/240)
     
-    # If we get here, we failed to reach the target
+    
     if debug:
-        print(f"❌ Failed to reach target position. Final distance: {distance:.4f}")
+        print(f" Failed to reach target position. Final distance: {distance:.4f}")
     return False
 
 def control_gripper(env, closing=True, grip_force=600, steps=100):
@@ -198,7 +198,7 @@ def check_contact(env):
     contacts = p.getContactPoints(env.unwrapped.robot_id, env.unwrapped.obj_id)
     
     if contacts:
-        print(f"✅ Found {len(contacts)} contact points")
+        print(f"Found {len(contacts)} contact points")
         
         # Visualize contacts
         for contact in contacts:
@@ -212,7 +212,7 @@ def check_contact(env):
             )
         return True
     else:
-        print("⚠️ No contact detected")
+        print(" No contact detected")
         return False
 
 def run_adjusted_base_grasp():
@@ -230,11 +230,11 @@ def run_adjusted_base_grasp():
     print(f"Target object position: {np.round(cube_pos, 4)}")
     
     # Step 1: Adjust robot base position to ensure cube is reachable
-    print("\n🚀 Step 1: Adjusting robot base position")
+    print("\n Step 1: Adjusting robot base position")
     adjust_info = modify_robot_position(env, cube_pos, reach_distance=0.25)
     
     # Initialize robot joints to a good starting position
-    print("\n🚀 Step 2: Setting initial joint positions")
+    print("\n Step 2: Setting initial joint positions")
     initial_joints = [0, -0.4, 0.6, -0.6, 0.0, 0.0, 0.0]
     for i, joint_idx in enumerate(env.unwrapped.arm_joint_indices):
         p.resetJointState(env.unwrapped.robot_id, joint_idx, initial_joints[i])
@@ -246,35 +246,35 @@ def run_adjusted_base_grasp():
             time.sleep(1/240)
     
     # Step 3: Open gripper
-    print("\n🚀 Step 3: Opening gripper")
+    print("\n Step 3: Opening gripper")
     control_gripper(env, closing=False)
     
     # Step 4: Move above the cube
-    print("\n🚀 Step 4: Moving above the cube")
+    print("\n Step 4: Moving above the cube")
     above_cube = np.array(cube_pos) + np.array([0, 0, 0.15])
     if not move_to_position(env, above_cube):
-        print("❌ Failed to position above cube")
+        print(" Failed to position above cube")
         env.close()
         return False
     
     # Step 5: Descend to grasp
-    print("\n🚀 Step 5: Descending to grasp position")
+    print("\n Step 5: Descending to grasp position")
     grasp_position = np.array(cube_pos) + np.array([0, 0, -0.005])
     if not move_to_position(env, grasp_position):
-        print("❌ Failed to reach grasp position")
+        print(" Failed to reach grasp position")
         env.close()
         return False
     
     # Step 6: Check for contact
-    print("\n🚀 Step 6: Checking for contact")
+    print("\n Step 6: Checking for contact")
     has_contact = check_contact(env)
     
     # Step 7: Close gripper
-    print("\n🚀 Step 7: Closing gripper")
+    print("\nStep 7: Closing gripper")
     control_gripper(env, closing=True, grip_force=800, steps=200)
     
     # Step 8: Lift object
-    print("\n🚀 Step 8: Lifting object")
+    print("\n Step 8: Lifting object")
     lift_position = np.array(cube_pos) + np.array([0, 0, 0.2])
     move_to_position(env, lift_position)
     
@@ -282,23 +282,23 @@ def run_adjusted_base_grasp():
     final_cube_pos, _ = p.getBasePositionAndOrientation(obj_id)
     lift_height = final_cube_pos[2] - cube_pos[2]
     
-    print("\n==== Grasp Result ====")
+    print("\n Grasp Result")
     print(f"Initial cube height: {cube_pos[2]:.4f}")
     print(f"Final cube height: {final_cube_pos[2]:.4f}")
     print(f"Lift distance: {lift_height:.4f}")
     
     if lift_height > 0.1:
-        print("✅ Grasp successful!")
+        print(" Grasp successful!")
         success = True
     elif lift_height > 0.05:
-        print("⚠️ Partial grasp - cube lifted but not securely")
+        print(" Partial grasp - cube lifted but not securely")
         success = True
     else:
-        print("❌ Grasp failed - cube remains on table")
+        print(" Grasp failed - cube remains on table")
         success = False
     
     # Keep simulation open until user exits
-    input("\n🔚 Press ENTER to exit")
+    input("\n Press ENTER to exit")
     env.close()
     
     return success
