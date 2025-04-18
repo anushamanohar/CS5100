@@ -3,6 +3,7 @@ import pybullet_data
 import os
 from env_setup import VisualRoboticArmEnv
 
+# Finding the correct no. of joints and their indices present in the robotic arm
 env = VisualRoboticArmEnv(render=False)
 env.reset()
 
