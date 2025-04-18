@@ -3,18 +3,19 @@ import os
 import numpy as np
 import torch
 
+# Tensor Board Logging 
 
 class CustomMetricsLogger(BaseCallback):
     def __init__(self, verbose=0):
         super().__init__(verbose)
 
     def _on_step(self) -> bool:
-        obs = self.locals['new_obs']  # new_obs is a dict (from DictObsWrapper)
+        obs = self.locals['new_obs']  
         state = obs['state']
 
-        # Handle batched observations (always shape [n_envs, ...])
+        
         if len(state.shape) > 1:
-            state = state[0]  # grab first env only
+            state = state[0]  
 
         cube_3d_pred = state[-3:]
         ee_pos = state[12:15]
