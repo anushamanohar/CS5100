@@ -1,14 +1,19 @@
-# improved_training.py
+# hybrid_training_4.py
+
 import os
 import time
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+
+# Importing RL components and utilities
 from stable_baselines3 import SAC
 from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
 from stable_baselines3.common.evaluation import evaluate_policy
+
+# Importing gym and pybullet
 import gymnasium as gym
 from gymnasium import spaces
 import argparse
@@ -18,19 +23,17 @@ import json
 
 from gymnasium.wrappers import TimeLimit
 
-# Import the modified environment and hybrid wrapper
+# Importing environment setup and policy modules
 from env_setup_multiobject import VisualRoboticArmEnv, make_env
 from env_setup_multiobject import VisualRoboticArmEnv, make_env, make_hybrid_env
-
-# Import policy and utils from existing code
 from cnn_policy import CustomSACPolicy
 from RL_train import DimensionAdapter, TrainingMetricsCallback, plot_training_results
 
-# Create directories for logs and models
+# Created directories for logs and models
 os.makedirs("logs", exist_ok=True)
 os.makedirs("models", exist_ok=True)
 
-# ================== VERBOSE CALLBACK ==================
+# Verbose Callback -prints reward and success info per episode during training
 class VerboseCallback(BaseCallback):
     def __init__(self, verbose=0):
         super(VerboseCallback, self).__init__(verbose)
@@ -50,13 +53,13 @@ class VerboseCallback(BaseCallback):
             self.episode_count += 1
             self.episode_rewards.append(self.current_reward)
             
-            # Get the last info for this episode
+            # Getting the last info for this episode
             info = self.locals['infos'][0]
             max_stage = info.get('stage', 0)
             max_lift = info.get('max_lift_height', 0)
             is_success = max_stage == 4
             
-            # Track takeovers
+            # Tracking hybrid takeover metrics
             env = self.locals['env'].envs[0]
             if hasattr(env, 'transition_triggered') and hasattr(env, 'takeover_attempts'):
                 takeovers = env.takeover_attempts
@@ -67,13 +70,13 @@ class VerboseCallback(BaseCallback):
             else:
                 takeover_info = ""
             
-            # Print episode summary
+            # Printing episode summary
             print(f"\nEpisode {self.episode_count} complete: Reward={self.current_reward:.2f}")
             print(f"Max Stage: {max_stage}, Success: {is_success}, Max Lift: {max_lift:.4f}m{takeover_info}")
             print(f"Average reward over {min(10, self.episode_count)} episodes: "
                   f"{np.mean(self.episode_rewards[-10:]):.2f}")
             
-            # If hybrid is being used, report takeover stats
+            # If hybrid is being used, takeover stats are recorded
             if self.takeover_attempts > 0:
                 success_rate = (self.takeover_success / self.takeover_attempts) * 100
                 print(f"Hybrid takeover success rate: {success_rate:.1f}% ({self.takeover_success}/{self.takeover_attempts})")
@@ -83,7 +86,7 @@ class VerboseCallback(BaseCallback):
             
         return True
 
-# ================== TRAINING FUNCTION ==================
+# Train the agent using optimized parameters and hybrid support
 def train_with_optimized_params(total_timesteps=150000, log_dir="logs/optimized_training", 
                                seed=0, render=False, learning_rate=0.0001, batch_size=1024,
                                buffer_size=300000, checkpoint=None, continue_training=False,
@@ -157,11 +160,11 @@ def train_with_optimized_params(total_timesteps=150000, log_dir="logs/optimized_
         filename="training_metrics_optimized.csv"
     )
     
-    # Add verbose callback for detailed progress tracking
+    # Adding verbose callback for detailed progress tracking
     verbose_callback = VerboseCallback()
     callbacks = [checkpoint_callback, metrics_callback, verbose_callback]
     
-    # Train the model
+    # Training the model
     print(f"Starting training with optimized parameters for {total_timesteps} timesteps...")
     start_time = time.time()
     
@@ -172,12 +175,12 @@ def train_with_optimized_params(total_timesteps=150000, log_dir="logs/optimized_
         reset_num_timesteps=not continue_training
     )
     
-    # Save the final model
+    # Saving the final model
     final_model_path = os.path.join(log_dir, "final_model")
     model.save(final_model_path)
     print(f"Model saved to {final_model_path}")
     
-    # Calculate training time
+    # Calculating training time
     training_time = time.time() - start_time
     print(f"Training completed in {training_time:.2f} seconds")
     
@@ -186,13 +189,13 @@ def train_with_optimized_params(total_timesteps=150000, log_dir="logs/optimized_
     
     return model, final_model_path
 
-# ================== TESTING FUNCTION ==================
+# TESTING FUNCTION 
 def test_model(model_path, num_episodes=10, render=True, seed=0, use_hybrid=True):
     """Test the trained agent with comprehensive metrics and visualization"""
     # Create logs directories
     os.makedirs("logs/test_details", exist_ok=True)
     
-    # Load environment with appropriate wrapper
+    # Load hybrid or standard environment
     if use_hybrid:
         print("Testing with hybrid RL/manual control environment")
         env = make_hybrid_env(seed=seed, render=render, num_objects=1, use_staged_rewards=True)()
@@ -200,19 +203,19 @@ def test_model(model_path, num_episodes=10, render=True, seed=0, use_hybrid=True
         print("Testing with standard RL environment")
         env = make_env(seed=seed, render=render, num_objects=1, use_staged_rewards=True)()
     
-    # Add dimension adapter
+    # Add wrappers
     env = DimensionAdapter(env)
     
     # Add monitor for logging
     env = Monitor(env, "logs/test_results")
     
-    # Load the model
+    # Loading the model
     model = SAC.load(model_path, env=env)
     
-    # Test the model
+    # Testing the model
     print(f"Testing model for {num_episodes} episodes...")
     
-    # Prepare arrays to collect metrics
+    # Record metrics
     rewards = []
     successes = []
     max_stages = []
@@ -325,7 +328,7 @@ def test_model(model_path, num_episodes=10, render=True, seed=0, use_hybrid=True
             if 'max_lift_height' in info:
                 max_lift = max(max_lift, info['max_lift_height'])
             
-            # Track hybrid takeover statistics - special case for our wrapper
+            # Track hybrid takeover statistics 
             if hasattr(env, 'transition_triggered') and env.transition_triggered:
                 # Only count each takeover once per episode
                 if len(episode_takeover_positions) == episode_takeovers:
@@ -507,15 +510,7 @@ def test_model(model_path, num_episodes=10, render=True, seed=0, use_hybrid=True
     plt.legend()
     plt.grid(True)
     
-    # # Plot grasp attempts
-    # plt.subplot(3, 3, 5)
-    # plt.bar(range(1, num_episodes+1), grasp_attempts)
-    # plt.xlabel('Episode')
-    # plt.ylabel('Number of Attempts')
-    # plt.title('Grasp Attempts per Episode')
-    # plt.grid(True)
-    
-    # Plot time to success
+
     plt.subplot(3, 3, 6)
     valid_times = [(i+1, t) for i, t in enumerate(time_to_success) if t is not None]
     if valid_times:
@@ -529,26 +524,6 @@ def test_model(model_path, num_episodes=10, render=True, seed=0, use_hybrid=True
         plt.text(0.5, 0.5, "No successful episodes", horizontalalignment='center')
         plt.title('Time to Success')
     
-    # # Plot average time per stage
-    # plt.subplot(3, 3, 7)
-    # stages = []
-    # times = []
-    # for stage, avg_time in avg_stage_times.items():
-    #     if avg_time > 0:
-    #         stages.append(stage_names[stage])
-    #         times.append(avg_time)
-    
-    # if times:
-    #     plt.bar(stages, times)
-    #     plt.xlabel('Stage')
-    #     plt.ylabel('Average Steps')
-    #     plt.title('Average Time per Stage')
-    #     plt.grid(True)
-    # else:
-    #     plt.text(0.5, 0.5, "No stage time data", horizontalalignment='center')
-    #     plt.title('Average Time per Stage')
-    
-    # Plot joint velocities
     plt.subplot(3, 3, 7)
     if joint_velocities:
         plt.bar(range(1, len(joint_velocities)+1), joint_velocities)
@@ -583,7 +558,7 @@ def test_model(model_path, num_episodes=10, render=True, seed=0, use_hybrid=True
     
     return success_rate, avg_reward, avg_stage
 
-# ================== MAIN FUNCTION ==================
+# MAIN FUNCTION 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train or test RL agent with optimized parameters')
     parser.add_argument('--train', action='store_true', help='Train a new model')
@@ -636,7 +611,7 @@ if __name__ == "__main__":
         success_rate, avg_reward, avg_stage = test_model(
             model_path=model_path,
             num_episodes=args.episodes,
-            render=True,  # Always render during testing
+            render=False,  # Always render during testing
             seed=args.seed,
             use_hybrid=use_hybrid
         )
