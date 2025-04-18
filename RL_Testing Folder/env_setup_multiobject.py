@@ -1,16 +1,19 @@
-# Modified env_setup_multiobject.py
-# Key changes:
-# 1. Fixed object position at stage 1
-# 2. Improved staged rewards
-# 3. Better transition conditions between stages
-# 4. Enhanced approach positioning rewards
-# 5. Added emergency takeover for hybrid controller
-# 6. Added demonstration-inspired initial positions
-# 7. ADDED FORCED TRANSITION AFTER 40 STEPS
-# 8. ADDED HEIGHT PENALTY IF TOO HIGH
-# 9. ADDED LARGE BONUS FOR REACHING STAGE 1
-# 10. ADDED STRONGER DOWNWARD INCENTIVE IN STAGE 1
-# 11. MADE TAKEOVER CONDITIONS MORE LENIENT
+# env_setup_multiobject.py
+# Outline:
+# 1.  Set object position at stage 1
+# 2.  Implemented staged reward system
+# 3.  Defined transition conditions between stages
+# 4.  Applied approach positioning rewards
+# 5.  Added emergency takeover for hybrid controller
+# 6.  Added forced transition after 40 steps
+# 7.  Added height penalty if too high
+# 8.  Added large bonus for reaching stage 1
+# 9. Added stronger downward incentive in stage 1
+# 10. Defined lenient takeover conditions 
+# 11. Integrated yolo-based 3d object detection
+# 12. Included rgb image, state vector, and yolo-estimated position in observation
+# 13. Created both RL-only and hybrid control support
+# 14. Added debug visuals and logging
 
 import gymnasium as gym
 from gymnasium import spaces
@@ -28,13 +31,16 @@ import sys
 import types
 import datetime
 
-# === YOLOv5 Setup ===
-YOLOV5_PATH = r"/home/shruti/CS5100/RL_training/fai_data_set/fai_data_set/yolov5"
-sys.path.insert(0, YOLOV5_PATH)
 from models.common import DetectMultiBackend
 from utils.general import non_max_suppression
 from utils.augmentations import letterbox
 from utils.torch_utils import select_device
+
+# === YOLOv5 Setup ===
+# Note : Please make sure you change the path to the yolov5 model before you start running this code
+YOLOV5_PATH = r"/home/shruti/CS5100/RL_training/fai_data_set/fai_data_set/yolov5"
+sys.path.insert(0, YOLOV5_PATH)
+
 
 # Color mapping for visualization and YOLO detection
 COLOR_MAP = {
@@ -45,7 +51,7 @@ COLOR_MAP = {
     'pink': [1, 0, 1, 1]
 }
 
-
+# Class defines the main RL environment for Robotic Arm Grasping
 class VisualRoboticArmEnv(gym.Env):
     def __init__(self, render=False, num_objects=1, stage=1, use_staged_rewards=True):
         super().__init__()
@@ -56,12 +62,14 @@ class VisualRoboticArmEnv(gym.Env):
         self.grasp_counter = 0
         self.stable_grasp_steps = 0
         self.grasped = False
-        self.num_objects = num_objects  # Store number of objects to create
+        # Store number of objects to create
+        self.num_objects = num_objects  
         self.stage = stage
         self.use_staged_rewards = use_staged_rewards
         
-        # Define the reachable workspace based on workspace analysis
+        # Defining the reachable workspace based on workspace analysis
         # Restricted to values that are known to be reachable
+        # Run test_limitations.py script present in Misc scripts to see the limitations of the arm's reachability
         self.reachable_workspace = {
             'x_min': 0.79, 'x_max': 0.84,  # Narrower x range for reliability
             'y_min': 0.1, 'y_max': 0.25,    # y range that robot can reach
@@ -80,13 +88,14 @@ class VisualRoboticArmEnv(gym.Env):
         # List to store all object IDs
         self.object_ids = []
 
+        # Defining the action space and observation space
         self.action_space = spaces.Box(low=-1, high=1, shape=(7,), dtype=np.float32)
         self.observation_space = spaces.Dict({
             "image": spaces.Box(low=0, high=255, shape=(64, 64, 3), dtype=np.uint8),
             "state": spaces.Box(low=-np.inf, high=np.inf, shape=(24,), dtype=np.float32)
         })
 
-        # === YOLOv5 Setup ===
+        # Setting up YOLOV5 best.pt model
         self.yolo_model_path = os.path.join(YOLOV5_PATH, "runs/train/exp/weights/best.pt")
         self.device = select_device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -96,9 +105,10 @@ class VisualRoboticArmEnv(gym.Env):
         self.conf_thres = 0.25
         self.iou_thres = 0.45
         
-        # === Stage-based reward variables ===
+        #  Stage-based reward variables 
         self.reset_stage_variables()
 
+    # Function - Calculates how close the end effector is to the approach position
     def _get_approach_progress(self, ee_pos, obj_pos):
         """Calculate progress towards ideal approach position (0 to 1)"""
         target_pos = np.array([obj_pos[0], obj_pos[1], obj_pos[2] + 0.1])
@@ -116,6 +126,7 @@ class VisualRoboticArmEnv(gym.Env):
         
         return progress
 
+    # Resets all tracking variables for stage-based rewards
     def reset_stage_variables(self):
         """Initialize stage-based tracking variables"""
         # Stage tracking (0: approach, 1: descent, 2: grasp, 3: lift, 4: success)
@@ -147,7 +158,8 @@ class VisualRoboticArmEnv(gym.Env):
         # Stage 1 tracking
         self.steps_in_stage1 = 0
         self.stage1_start_height = 0
-
+    
+    # Resets the whole environment and sets up urdfs    
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
         if seed is not None:
@@ -169,6 +181,7 @@ class VisualRoboticArmEnv(gym.Env):
         # Table 2 (drop here) – placed further back to avoid overlap
         self.drop_table_id = p.loadURDF(os.path.join(self.urdf_dir, "table.urdf"), [1.0, -1.0, 0.3], useFixedBase=True)
         
+        # Tray 2 drop zone
         self.drop_tray_id = p.loadURDF(os.path.join(self.urdf_dir, "tray.urdf"), [1.0, -0.7, 0.35], useFixedBase=True)
         
         # Add visual markers for reachable workspace
@@ -212,8 +225,7 @@ class VisualRoboticArmEnv(gym.Env):
                         p.resetJointState(self.robot_id, joint_idx, 
                                           ik_solution[i] + noise)
         else:
-            # Create objects with FIXED position for more reliable training at stage 1
-            self.create_multiple_objects(stage=1)  # Always use stage 1 (fixed position) for training
+            self.create_multiple_objects(stage=1)  
 
         self.ee_link_index = self._get_ee_index()
         self.gripper_joints = self._get_gripper_joint_indices()
@@ -275,7 +287,8 @@ class VisualRoboticArmEnv(gym.Env):
             self.initial_obj_pos = None
 
         return self._get_obs(), {}
-
+    
+    # Spawns objects
     def create_multiple_objects(self, stage=None):
         """Create objects with a FIXED position for more consistent training"""
         if stage is None:
@@ -283,18 +296,15 @@ class VisualRoboticArmEnv(gym.Env):
             
         self.object_ids = []
     
-        # COMPLETELY FIXED POSITION - Always place at exactly the same position during all stages
-        # This helps the agent learn a reliable grasp instead of dealing with variations
         base_pos = [0.83, 0.21, 0.45]
     
-        # No variation regardless of stage - removed the stage-based variation
-        # This ensures consistent learning for the grasp task
         obj_id = p.loadURDF(os.path.join(self.urdf_dir, "box.urdf"), base_pos)
         p.changeVisualShape(obj_id, -1, rgbaColor=[1, 0, 0, 1])
         self.object_ids.append(obj_id)
     
         return self.object_ids
     
+    # Returns the current observation (image + state vector)
     def _get_obs(self):
         """Get current observation state"""
         joint_angles = [p.getJointState(self.robot_id, i)[0] for i in self.arm_joint_indices]
@@ -315,7 +325,7 @@ class VisualRoboticArmEnv(gym.Env):
         run_yolo = hasattr(self, 'step_counter') and self.step_counter % 3 == 0  # Only every 3 steps
     
         # Camera setup for vision - consistent size
-        width, height = 64, 64  # Make sure this matches your CNN input size
+        width, height = 64, 64 
         fov = 60
         eye = [1.0, -0.2, 0.8]
         target = [1.0, 0.0, 0.35]
@@ -400,7 +410,8 @@ class VisualRoboticArmEnv(gym.Env):
         # Always concatenate the state with position estimate
         state = np.concatenate((state, cube_estimated_pos))
         return {"image": image, "state": state}
-
+    
+    # Gets index of end effector link
     def _get_ee_index(self):
         for i in range(p.getNumJoints(self.robot_id)):
             joint_info = p.getJointInfo(self.robot_id, i)
@@ -408,11 +419,13 @@ class VisualRoboticArmEnv(gym.Env):
                 return i
         return p.getNumJoints(self.robot_id) - 1
 
+    # returns joint indices for gripper fingers
     def _get_gripper_joint_indices(self):
         names = ["left_finger_joint", "right_finger_joint"]
         return [i for i in range(p.getNumJoints(self.robot_id))
                 if p.getJointInfo(self.robot_id, i)[1].decode("utf-8") in names]
 
+    # Checks if object is currently grasped by both fingers
     def _check_grasp(self):
         contacts = p.getContactPoints(bodyA=self.robot_id, bodyB=self.obj_id)
     
@@ -432,6 +445,7 @@ class VisualRoboticArmEnv(gym.Env):
             
         return good_grasp
 
+    # Updates variables used to track current reward stage
     def _update_stage_variables(self, action, ee_pos, obj_pos, is_grasping, lift_height):
         """Update stage tracking for the staged reward system - MODIFIED FOR EASIER TRANSITIONS"""
         # Calculate metrics
@@ -481,7 +495,6 @@ class VisualRoboticArmEnv(gym.Env):
                     # Reset if drifting away
                     self.stable_hover_steps = 0
     
-        # IMPROVED Stage 1→2 transition - Even simpler condition
         elif self.current_stage == 1:  # Descent stage
             # Update Stage 1 tracking
             if hasattr(self, 'steps_in_stage1'):
@@ -495,7 +508,7 @@ class VisualRoboticArmEnv(gym.Env):
                 total_descent = self.stage1_start_height - ee_pos[2]
                 if total_descent < 0.05:  # Less than 5cm descent in 10 steps
                     print(f"WARNING: Insufficient descent in Stage 1 ({total_descent:.4f}m)")
-                    # We'll handle this in the reward function
+                    
             
             # Much more lenient distance threshold
             if self.distance_to_object < 0.12:  # Increased from 0.07
@@ -543,6 +556,7 @@ class VisualRoboticArmEnv(gym.Env):
         # Visualize current stage
         self._visualize_stage(ee_pos)
         
+    # Shows debug text and lines to visualize current stage
     def _visualize_stage(self, ee_pos):
         """Add enhanced visual indicators of current stage for debugging"""
         if not self.render:
@@ -624,8 +638,9 @@ class VisualRoboticArmEnv(gym.Env):
                         lifeTime=0.2
                     )
         except:
-            pass  # Ignore any visualization errors
-
+            pass  
+    
+    # Gives reward based on current stage and task progress
     def _calculate_staged_reward(self, action, ee_pos, obj_pos, is_grasping, lift_height):
         """Calculate reward based on current stage and state - MODIFIED REWARD STRUCTURE"""
         reward = 0.0
@@ -633,9 +648,9 @@ class VisualRoboticArmEnv(gym.Env):
         # Base penalty for time - reduced to encourage exploration
         reward -= 0.02  # Reduced from 0.05
     
-        # === Stage 0: Approach object from above - ADJUSTED TO ENCOURAGE PROGRESSION ===
+        # === Stage 0: Approach object from above  ===
         if self.current_stage == 0:
-            # Target position is DIRECTLY above object with clearer height offset
+            # Target position is directly above object with clearer height offset
             target_pos = np.array([obj_pos[0], obj_pos[1], obj_pos[2] + 0.1])
             distance_to_target = np.linalg.norm(ee_pos - target_pos)
         
@@ -666,7 +681,7 @@ class VisualRoboticArmEnv(gym.Env):
             else:
                 reward -= 2.0  # Penalize closed gripper in approach
                 
-            # ADD HEIGHT PENALTY if too high above the object
+            # Add High penalty if too high above the object
             if ee_pos[2] > obj_pos[2] + 0.3:  # If more than 30cm above the object
                 height_penalty = min(50.0, (ee_pos[2] - (obj_pos[2] + 0.3)) * 100.0)  # Penalty scales with height
                 reward -= height_penalty
@@ -680,7 +695,6 @@ class VisualRoboticArmEnv(gym.Env):
                 except:
                     pass
             
-            # *** IMPORTANT CHANGE: Cap Stage 0 reward to encourage progression ***
             # This prevents the agent from staying in Stage 0 indefinitely
             # Limit total Stage 0 reward to 150 plus bonuses for being in position
             # This way it's still better to move to Stage 1 than stay in Stage 0
@@ -701,13 +715,13 @@ class VisualRoboticArmEnv(gym.Env):
                 
                 reward = min(max_stage0_reward, reward) + stage0_bonus
 
-        # === Stage 1: Descend to grasp - IMPROVED REWARD STRUCTURE ===
+        # === Stage 1: Descend to grasp ===
         elif self.current_stage == 1:
             # Base reward for Stage 1 - higher than max Stage 0 reward
             base_reward = 200.0
             reward += base_reward
             
-            # ADD LARGE BONUS FOR REACHING STAGE 1
+            # Add large bonus for reaching stage 1
             reward += 500.0  # Big bonus just for reaching Stage 1
             print("Adding +500 reward for reaching Stage 1!")
         
@@ -723,7 +737,7 @@ class VisualRoboticArmEnv(gym.Env):
             # Reward for getting closer to object - stronger
             reward += (1.0 - min(1.0, self.distance_to_object / 0.1)) * 15.0
         
-            # STRONG INCENTIVE TO MOVE DOWNWARD in Stage 1
+            # Strong Incentive to Downward in Stage 1
             if self.last_ee_pos is not None:
                 # Reward for moving downward (negative z direction)
                 z_movement = self.last_ee_pos[2] - ee_pos[2]
@@ -806,7 +820,7 @@ class VisualRoboticArmEnv(gym.Env):
             else:
                 reward -= 20.0  # Same penalty for dropping
             
-            # Substantial reward for lifting - MUCH higher
+            # Substantial reward for lifting 
             reward += lift_height * 500.0  # Increased from 300.0
         
             # Extra reward for faster lifting
@@ -817,7 +831,7 @@ class VisualRoboticArmEnv(gym.Env):
         
         # === Stage 4: Success ===
         elif self.current_stage == 4:
-            # Large success reward - INCREASED
+            # Large success reward 
             reward += 800.0  # Increased from 500.0
         
             # Continue rewarding lifting higher
@@ -827,7 +841,7 @@ class VisualRoboticArmEnv(gym.Env):
             if is_grasping:
                 reward += 100.0  # Increased from 50.0
     
-        # Global penalties to discourage unwanted behavior - REDUCED
+        # Global penalties to discourage unwanted behavior 
     
         # Penalty for pushing object without grasping
         if not is_grasping and self.initial_obj_pos is not None:
@@ -856,7 +870,8 @@ class VisualRoboticArmEnv(gym.Env):
         reward -= min(0.5, np.sum(np.abs(joint_velocities)) * 0.003)
     
         return reward
-
+    
+    # Computes the reward for each step (staged or basic)
     def _compute_reward(self):
         """Compute reward for the current state"""
         # Get positions
@@ -912,6 +927,7 @@ class VisualRoboticArmEnv(gym.Env):
         
             return reward, False
 
+    # Applies the given action and steps simulation forward
     def step(self, action):
         # Store the action for reward calculation
         self.last_action = action.copy()
@@ -955,6 +971,7 @@ class VisualRoboticArmEnv(gym.Env):
         
         return obs, reward, done or self.step_counter >= self.max_steps, False, info
     
+    # Changes the current target object to another index
     def set_target_object(self, index):
         """Set the target object to a specific index in the object_ids list"""
         if 0 <= index < len(self.object_ids):
@@ -963,17 +980,20 @@ class VisualRoboticArmEnv(gym.Env):
             self.initial_obj_pos = np.array(obj_pos)
             return True
         return False
-        
+    
+    # Returns positions of source and destination trays    
     def get_tray_positions(self):
         """Get positions of source and destination trays"""
         source_pos, _ = p.getBasePositionAndOrientation(self.tray_id)
         dest_pos, _ = p.getBasePositionAndOrientation(self.drop_tray_id)
         return source_pos, dest_pos
-        
+    
+    # Returns the list of all object ids in the scene
     def get_object_ids(self):
         """Get list of all object IDs"""
         return self.object_ids
-
+    
+    # Closes the simulation and disconnects from pybullet
     def close(self):
         p.disconnect()
         
@@ -987,22 +1007,8 @@ def make_env(seed=0, render=False, num_objects=1, use_staged_rewards=True):
         return env
     return _init
 
-def make_hybrid_env(seed=0, render=False, num_objects=1, use_staged_rewards=True):
-    """Create an environment with the hybrid control approach"""
-    def _init():
-        # Create the base environment
-        env = VisualRoboticArmEnv(render=render, num_objects=num_objects, use_staged_rewards=use_staged_rewards)
         
-        # Wrap with the hybrid controller
-        env = HybridRLEnv(env)
-        
-        # Add standard wrappers
-        env = Monitor(env)
-        env = TimeLimit(env, max_episode_steps=200)
-        env.reset(seed=seed)
-        return env
-    return _init
-        
+# Class defines manual grasp logic over RL control using hybrid approach       
 class HybridRLEnv(gym.Wrapper):
     """Environment wrapper that uses RL for positioning and manual control for grasping"""
     
@@ -1021,6 +1027,7 @@ class HybridRLEnv(gym.Wrapper):
         self.log_file = open(f"logs/hybrid_debug_{timestamp}.csv", "w")
         self.log_file.write("step,stage,ee_x,ee_y,ee_z,obj_x,obj_y,obj_z,xy_distance,z_difference,is_good_position,is_emergency,action_grip\n")
     
+    # Resets hybrid controller state variables
     def reset(self, **kwargs):
         self.transition_triggered = False
         self.manual_sequence_step = 0
@@ -1028,6 +1035,7 @@ class HybridRLEnv(gym.Wrapper):
         self.takeover_attempts = 0
         return self.env.reset(**kwargs)
     
+    # Takes a step in environment using hybrid policy logic
     def step(self, action):
         # Get current positions for debugging
         ee_pos = p.getLinkState(self.env.unwrapped.robot_id, self.env.unwrapped.ee_link_index)[0]
@@ -1110,7 +1118,8 @@ class HybridRLEnv(gym.Wrapper):
             # Execute the proven manual grasping sequence
             obs, reward, terminated, truncated, info = self.execute_proven_grasp_sequence()
             return obs, reward, terminated, truncated, info
-    
+        
+    # Decides if hybrid controller should take over
     def _should_take_over(self):
         """Determine if the controller should take over with more lenient criteria
         Returns: (should_take_over, is_emergency)"""
@@ -1124,11 +1133,10 @@ class HybridRLEnv(gym.Wrapper):
         ee_pos = p.getLinkState(self.env.unwrapped.robot_id, self.env.unwrapped.ee_link_index)[0]
         obj_pos, _ = p.getBasePositionAndOrientation(self.env.unwrapped.obj_id)
 
-        # Calculate distances with MUCH MORE LENIENT thresholds
+        # Calculate distances with lenient thresholds
         xy_distance = np.linalg.norm(np.array(ee_pos[:2]) - np.array(obj_pos[:2]))
         z_difference = ee_pos[2] - obj_pos[2]
     
-        # MUCH MORE LENIENT criteria for takeovers - focus on XY alignment, less on Z
         good_position = (
             xy_distance < 0.18 and      # Very wide XY alignment (was 0.16)
             z_difference < 0.45 and     # Only check if too high (don't check too low)
@@ -1142,7 +1150,7 @@ class HybridRLEnv(gym.Wrapper):
              z_difference < -0.1)       # Way too low
         )
         
-        # Add STAGE-BASED hybrid takeover criteria
+        # Add Stage-based hybrid takeover criteria
         # Force takeover if we've been in Stage 1 for too long
         if (self.env.unwrapped.current_stage == 1 and 
             hasattr(self.env.unwrapped, 'step_counter') and 
@@ -1160,7 +1168,7 @@ class HybridRLEnv(gym.Wrapper):
             print(f"FORCE TAKEOVER: Contact detected with object ({len(contacts)} points)")
             return True, False
 
-        # ADDITIONAL CONDITION: If we're in approach stage for too long, take over
+        #  If we're in approach stage for too long, take over
         if (self.env.unwrapped.current_stage == 0 and 
             hasattr(self.env.unwrapped, 'step_counter') and 
             self.env.unwrapped.step_counter > 30 and
@@ -1196,6 +1204,7 @@ class HybridRLEnv(gym.Wrapper):
 
         return good_position or emergency_takeover, emergency_takeover
     
+    # Runs manual grasping routine step-by-step
     def execute_proven_grasp_sequence(self):
         """Execute grasp using the proven minimal approach from final_grasp_test.py"""
         print("HYBRID: Starting proven minimal grasp sequence")
@@ -1369,7 +1378,7 @@ class HybridRLEnv(gym.Wrapper):
         # Restore gravity
         p.setGravity(0, 0, -9.81)  # Normal gravity
         
-        # STEP 7: HOLD AND CHECK LIFT SUCCESS
+        # STEP 7: Hold and Check lift success
         print("HYBRID: Step 7: Checking lift success")
         for _ in range(60):
             p.stepSimulation()
@@ -1451,6 +1460,7 @@ class HybridRLEnv(gym.Wrapper):
                 'grasp_failed': True
             }
     
+    # Checks grasp using contact points from both fingers
     def _check_grasp(self):
         """Check if object is grasped using contact points"""
         contacts = p.getContactPoints(bodyA=self.env.unwrapped.robot_id, bodyB=self.env.unwrapped.obj_id)
@@ -1471,6 +1481,7 @@ class HybridRLEnv(gym.Wrapper):
             
         return good_grasp
     
+    # creates a fixed constraint between end effector and object# creates a fixed constraint between end effector and object
     def _create_fixed_constraint(self):
         """Create a fixed constraint between gripper and object"""
         robot_id = self.env.unwrapped.robot_id
@@ -1509,7 +1520,8 @@ class HybridRLEnv(gym.Wrapper):
         except Exception as e:
             print(f"HYBRID: Error creating constraint: {e}")
             return None
-    
+        
+    # Closes hybrid controller and logs
     def close(self):
         """Clean up resources when environment is closed"""
         if hasattr(self, 'log_file') and self.log_file:
