@@ -128,7 +128,7 @@ requirements.txt                        # Python package dependencies
 
 ```bash
 git clone https://github.com/anushamanohar/CS5100.git
-cd repo_name
+cd CS5100
 ```
 
 ### Step 2: Install Dependencies
