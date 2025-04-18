@@ -1,0 +1,24 @@
+# Simulation Environment
+pybullet==3.2.5
+
+# Reinforcement Learning (Stable Baselines3)
+stable-baselines3==1.7.0
+gymnasium==0.29.1
+torch>=1.13.0
+numpy>=1.21.0
+
+# CNN Policy and vision processing
+opencv-python==4.7.0.72
+matplotlib>=3.5.0
+Pillow>=8.4.0
+
+# YOLOv5 dependencies
+scipy>=1.8.0
+pandas>=1.3.0
+seaborn>=0.11.0
+tqdm>=4.64.0
+
+# Miscellaneous
+tensorboard>=2.10.0
+imageio
+scikit-image
