@@ -201,22 +201,6 @@ The system uses a staged reward approach to break down the complex task of grasp
 
 The hybrid approach integrates proven manual control sequences to handle the more precise grasping requirements.
 
-## Future Enhancements
-
-- Improve object variety and difficulty
-- Transfer to real robotic hardware
-- Implement more complex manipulation tasks
-- Optimize for speed and efficiency
-- Improve the CNN architecture for better visual processing
-- Extend the current Hybrid RL model to do the drop sequence along with the existing grasp sequence as well
-
-## Contributors
-
-1. Shruti Pasumarti
-2. Anusha Manohar
-3. Spencer Karofsky
-4. Hemanth Sai Madadapu
-
 ## Manual Testing Result Images
 
 <h3>Manipulation Process</h3>
@@ -247,3 +231,19 @@ This project presents a vision-integrated reinforcement learning system for robo
 The plot below demonstrates a 100% success rate achieved using this hybrid RL approach, highlighting its effectiveness. 
 
 ![Success Rate Plot](optimized_test_results.png)
+
+## Future Enhancements
+
+- Improve object variety and difficulty
+- Transfer to real robotic hardware
+- Implement more complex manipulation tasks
+- Optimize for speed and efficiency
+- Improve the CNN architecture for better visual processing
+- Extend the current Hybrid RL model to do the drop sequence along with the existing grasp sequence as well
+
+## Contributors
+
+1. Shruti Pasumarti
+2. Anusha Manohar
+3. Spencer Karofsky
+4. Hemanth Sai Madadapu
