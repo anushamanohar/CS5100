@@ -3,6 +3,8 @@ from trimesh.creation import box, cylinder
 import numpy as np
 import os
 
+# Experimenting with mesh creation for the gripper attached to the robotic arm
+
 output_dir = "urdf_files/custom_claw_parts"
 os.makedirs(output_dir, exist_ok=True)
 
@@ -41,12 +43,11 @@ claw_right = claw_left.copy()
 claw_right.apply_scale([-1, 1, 1])  # Mirror across X
 save(claw_right, "claw_right")
 
-# Optional: pins
 pin = cylinder(radius=0.005, height=0.02)
 save(pin, "pin")
 
-print("✅ Custom claw components exported.")
+print(" Custom claw components exported.")
 
 mesh=trimesh.load("urdf_files/custom_claw_parts/claw_base.stl")
-mesh.show(viewer='gl')  # or 'windowed'
+mesh.show(viewer='gl')
 
