@@ -205,9 +205,9 @@ def analyze_robot_workspace(env, samples=500, visualize=True, save_path="workspa
     # Check for contact
     contacts = p.getContactPoints(robot_id, env.unwrapped.obj_id)
     if contacts:
-        print(f"  ✅ Contact established with {len(contacts)} points!")
+        print(f"   Contact established with {len(contacts)} points!")
     else:
-        print("  ❌ No contact detected with best configuration.")
+        print("   No contact detected with best configuration.")
     
     # Close gripper to test grasp
     p.setJointMotorControl2(robot_id, left, p.POSITION_CONTROL, 0.0, force=1000)
@@ -241,11 +241,11 @@ def analyze_robot_workspace(env, samples=500, visualize=True, save_path="workspa
     print(f"  Lift distance: {lift_height:.4f}")
     
     if lift_height > 0.1:
-        print("  ✅ Grasp and lift successful!")
+        print("  Grasp and lift successful!")
     elif lift_height > 0.05:
-        print("  ⚠️ Partial grasp - cube lifted but not securely")
+        print("   Partial grasp - cube lifted but not securely")
     else:
-        print("  ❌ Grasp failed - cube remains on table")
+        print("   Grasp failed - cube remains on table")
     
     print("\nWorkspace analysis complete!")
     return ee_positions, closest_distance, lift_height > 0.05
@@ -290,7 +290,7 @@ def test_alternative_cube_positions(env, num_positions=3, samples_per_position=2
     
     # Test each position
     for i, position in enumerate(test_positions):
-        print(f"\n=========================================")
+        
         print(f"Testing cube position {i+1}/{len(test_positions)}: {np.round(position, 4)}")
         
         # Reset cube position
@@ -315,7 +315,7 @@ def test_alternative_cube_positions(env, num_positions=3, samples_per_position=2
         
         # If the grasp was successful, we've found a good position
         if grasp_success:
-            print(f"✅ Found a reachable position! {np.round(position, 4)}")
+            print(f"Found a reachable position! {np.round(position, 4)}")
             break
     
     # Restore original position
@@ -324,7 +324,7 @@ def test_alternative_cube_positions(env, num_positions=3, samples_per_position=2
     # Report results
     print("\n=== Alternative Position Test Results ===")
     for i, result in enumerate(results):
-        status = "✅ SUCCESS" if result['grasp_success'] else "❌ FAILED"
+        status = "SUCCESS" if result['grasp_success'] else "FAILED"
         print(f"Position {i+1}: {np.round(result['position'], 4)}")
         print(f"  Closest distance: {result['distance']:.4f}m")
         print(f"  Grasp test: {status}")
@@ -349,7 +349,7 @@ def run_workspace_analysis():
     env = make_env(render=True)()
     obs, _ = env.reset()
     
-    print("\n== ROBOT WORKSPACE ANALYSIS ==")
+    print("\n ROBOT WORKSPACE ANALYSIS ")
     print("Analyzing the robot's reachable workspace to verify kinematic limits...")
     
     # First analyze the workspace with the original cube position
@@ -385,7 +385,7 @@ def run_workspace_analysis():
     print("\nWorkspace analysis complete. Refer to the generated plots for visualization.")
     
     # Keep simulation running until user exits
-    input("🔚 Press ENTER to exit")
+    input("Press ENTER to exit")
     env.close()
 
 if __name__ == "__main__":
